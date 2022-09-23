@@ -22,7 +22,7 @@ app.layout = dbc.Container([
             dbc.Card([
                 html.H2("Abbott Lab GUI"),
                 html.H5("Coolness overload")
-            ], body="true"), width={"size": 6, "offset": 3})
+            ], body="true", color="light"), width={"size": 10, "offset": 1})
     ]),
     html.Hr(),
     dbc.Row([
@@ -36,24 +36,23 @@ app.layout = dbc.Container([
                              'SOL', 'STR', 'TCU', 'TIE', 'WAN'],
                     value='BEN',
                     id='site_id',
-                    style={'margin': '15px', 'display': 'inline-block'}),
-                dbc.Button("Query Site", id="query", color="primary", style={"margin": "5px"},
+                    style={'display': 'inline-block',"margin": "5px"}),
+                dbc.Button("Query Site", id="query", color="primary", style={'display': 'inline-block', "margin": "5px"},
                            n_clicks=0)
-            ], body="true"),
+            ], body="true", color="light"),
             html.Hr(),
             dbc.Card([
-                html.P("Selected Outlier"),
                 dcc.Markdown("""
                     **Click Data**
 
-                    Click on points in the graph.
+                    Click on a point from the graph to display more about that observation.
                 """),
                 html.Pre(id='selected')
-            ], body="true")
-        ], width=3),
+            ], body="true", color="light")
+        ], width=2),
         dbc.Col(
             dbc.Card(
-                dcc.Graph(id='indicator-graphic')), width=6)
+                dcc.Graph(id='indicator-graphic'), body='True', color="light"), width=10)
     ])
 ])
 
