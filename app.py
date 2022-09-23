@@ -1,7 +1,7 @@
 # Run this app with `python app.py` and
 # visit http://127.0.0.1:8050/ in your web browser.
 
-from dash import Dash, html, dcc, dash_table
+from dash import Dash, dcc, html, dash_table
 from dash.dependencies import Output, Input, State
 import dash_bootstrap_components as dbc
 import plotly.express as px
@@ -12,21 +12,22 @@ import sqlite3
 from run_query import get_pressure, get_discharge
 
 # Declare the database file name here
-db_name = "/Users/ethanmcquhae/Desktop/copy.db"
+db_name = "copy.db"
 
-app = Dash(__name__)
+app = Dash(external_stylesheets=[dbc.themes.FLATLY])
 
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col([
-            html.H2("Abbott Lab GUI"),
-            html.H5("Coolness overload"),
-        ], width=True)
-    ], align="end"),
+        dbc.Col(
+            dbc.Card([
+                html.H2("Abbott Lab GUI"),
+                html.H5("Coolness overload")
+            ], body="true"), width={"size": 6, "offset": 3})
+    ]),
     html.Hr(),
     dbc.Row([
         dbc.Col([
-            html.Div([
+            dbc.Card([
                 html.H5("Run Site Query"),
                 html.P("Site ID:"),
                 dcc.Dropdown(
@@ -38,9 +39,9 @@ app.layout = dbc.Container([
                     style={'margin': '15px', 'display': 'inline-block'}),
                 dbc.Button("Query Site", id="query", color="primary", style={"margin": "5px"},
                            n_clicks=0)
-            ]),
+            ], body="true"),
             html.Hr(),
-            html.Div([
+            dbc.Card([
                 html.P("Selected Outlier"),
                 dcc.Markdown("""
                     **Click Data**
@@ -48,11 +49,11 @@ app.layout = dbc.Container([
                     Click on points in the graph.
                 """),
                 html.Pre(id='selected')
-            ])
+            ], body="true")
         ], width=3),
-        dbc.Col([
-            dcc.Graph(id='indicator-graphic')
-        ], width=True)
+        dbc.Col(
+            dbc.Card(
+                dcc.Graph(id='indicator-graphic')), width=6)
     ])
 ])
 
@@ -76,7 +77,7 @@ def main_query(n_clicks, site_id):
     # discharge_data = get_discharge(cursor, site_id)
 
     figure = px.scatter(pressure_data, x=pressure_data.datetime, y=pressure_data.pressure_hobo,
-                        color=pressure_data.batch_id)  # FIXME: Need to reorder the x-axis to be in chronological order
+                        color=pressure_data.batch_id)
 
     return figure
 
