@@ -42,17 +42,43 @@ app.layout = dbc.Container([
             ], body="true", color="light"),
             html.Hr(),
             dbc.Card([
-                dcc.Markdown("""
-                    **Click Data**
-
-                    Click on a point from the graph to display more about that observation.
-                """),
-                html.Pre(id='selected')
+                dbc.Button("Delete", id="delete", color="primary",
+                           style={'display': 'inline-block', "margin": "5px"},
+                           n_clicks=0),
+                dbc.Button("Move Up", id="moveUp", color="primary",
+                           style={'display': 'inline-block', "margin": "5px"},
+                           n_clicks=0),
+                dbc.Button("Move Down", id="moveDown", color="primary",
+                           style={'display': 'inline-block', "margin": "5px"},
+                           n_clicks=0),
+                dbc.Button("Export Data", id="exportDF", color="primary",
+                           style={'display': 'inline-block', "margin": "5px"},
+                           n_clicks=0),
             ], body="true", color="light")
         ], width=2),
         dbc.Col(
             dbc.Card(
                 dcc.Graph(id='indicator-graphic'), body='True', color="light"), width=10)
+    ]),
+    html.Hr(),
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dcc.Markdown("""
+                    **Click Data**
+            
+                    Click on a point from the graph to display more about that observation.
+                """),
+                html.Pre(id='selected'),
+            ], body="true", color="light")
+        ], width=2),
+        dbc.Col([
+            dbc.Card([
+                dcc.Markdown("""
+                    *TABLE HERE*
+                """),
+            ], body="true", color="light")
+        ], width=10)
     ])
 ])
 
