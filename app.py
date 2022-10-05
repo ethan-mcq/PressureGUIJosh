@@ -1,18 +1,19 @@
 # Run this app with `python app.py` and
 # visit http://127.0.0.1:8050/ in your web browser.
-
+import pandas as pd
 from dash import Dash, dcc, html, dash_table
 from dash.dependencies import Output, Input, State
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import json
+import numpy as np
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import sqlite3
 from run_query import get_pressure, get_discharge
 
 # Declare the database file name here
-db_name = "copy.db"
+db_name = "/Users/ethanmcquhae/Desktop/copy.db"
 
 app = Dash(external_stylesheets=[dbc.themes.FLATLY])
 
@@ -36,8 +37,9 @@ app.layout = dbc.Container([
                              'SOL', 'STR', 'TCU', 'TIE', 'WAN'],
                     value='BEN',
                     id='site_id',
-                    style={'display': 'inline-block',"margin": "5px"}),
-                dbc.Button("Query Site", id="query", color="primary", style={'display': 'inline-block', "margin": "5px"},
+                    style={'display': 'inline-block', "margin": "5px"}),
+                dbc.Button("Query Site", id="query", color="primary",
+                           style={'display': 'inline-block', "margin": "5px"},
                            n_clicks=0)
             ], body="true", color="light"),
             html.Hr(),
@@ -73,11 +75,8 @@ app.layout = dbc.Container([
             ], body="true", color="light")
         ], width=2),
         dbc.Col([
-            dbc.Card([
-                dcc.Markdown("""
-                    *TABLE HERE*
-                """),
-            ], body="true", color="light")
+            dbc.Card([html.Div(id="update-table"),
+                      ], body="true", color="light")
         ], width=10)
     ])
 ])
@@ -85,6 +84,7 @@ app.layout = dbc.Container([
 
 @app.callback(
     Output('indicator-graphic', 'figure'),
+    Output('update-table', 'children'),
     Input('query', 'n_clicks'),
     State('site_id', 'value'))
 def main_query(n_clicks, site_id):
@@ -101,16 +101,30 @@ def main_query(n_clicks, site_id):
     pressure_data = get_pressure(cursor, site_id)
     # discharge_data = get_discharge(cursor, site_id)
 
+    table = pd.DataFrame(pressure_data)
+    table['pressure_hobo'].replace('', np.nan, inplace=True)
+    table.dropna(subset=['pressure_hobo'], inplace=True)
+    table.drop('index', axis=1, inplace=True)
+
     figure = px.scatter(pressure_data, x=pressure_data.datetime, y=pressure_data.pressure_hobo,
                         color=pressure_data.batch_id)
 
-    return figure
+    return figure, html.Div(
+        [
+            dash_table.DataTable(
+                data=table.to_dict("rows"),
+                columns=[{"id": x, "name": x} for x in table.columns],
+            )
+        ]
+    )
+
 
 @app.callback(
     Output('selected', 'children'),
     Input('indicator-graphic', 'clickData'))
 def display_selected(clickData):
     return json.dumps(clickData, indent=1)
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
