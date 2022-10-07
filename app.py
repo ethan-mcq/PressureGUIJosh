@@ -13,11 +13,13 @@ import sqlite3
 from run_query import get_pressure, get_discharge
 
 # Declare the database file name here
-db_name = "/Users/ethanmcquhae/Desktop/copy.db"
+db_name = "copy.db"
 
 app = Dash(external_stylesheets=[dbc.themes.FLATLY])
 
+
 app.layout = dbc.Container([
+    dcc.Store(id='memory-output'),
     dbc.Row([
         dbc.Col(
             dbc.Card([
@@ -68,7 +70,7 @@ app.layout = dbc.Container([
             dbc.Card([
                 dcc.Markdown("""
                     **Click Data**
-            
+
                     Click on a point from the graph to display more about that observation.
                 """),
                 html.Pre(id='selected'),
@@ -83,6 +85,7 @@ app.layout = dbc.Container([
 
 
 @app.callback(
+    Output('memory-output', 'data'),
     Output('indicator-graphic', 'figure'),
     Output('update-table', 'children'),
     Input('query', 'n_clicks'),
@@ -109,7 +112,9 @@ def main_query(n_clicks, site_id):
     figure = px.scatter(pressure_data, x=pressure_data.datetime, y=pressure_data.pressure_hobo,
                         color=pressure_data.batch_id)
 
-    return figure, html.Div(
+    data = table.to_json()
+
+    return data, figure, html.Div(
         [
             dash_table.DataTable(
                 data=table.to_dict("rows"),
@@ -117,6 +122,7 @@ def main_query(n_clicks, site_id):
             )
         ]
     )
+
 
 
 @app.callback(
