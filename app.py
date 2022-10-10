@@ -3,6 +3,7 @@
 import pandas as pd
 from dash import Dash, dcc, html, dash_table
 from dash.dependencies import Output, Input, State
+from dash_extensions.enrich import Output, DashProxy, Input, MultiplexerTransform
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import json
@@ -15,9 +16,12 @@ from run_query import get_pressure, get_discharge
 # Declare the database file name here
 db_name = "/Users/ethanmcquhae/Desktop/copy.db"
 
-app = Dash(external_stylesheets=[dbc.themes.FLATLY])
+#app = Dash(external_stylesheets=[dbc.themes.FLATLY])
+app = DashProxy(external_stylesheets=[dbc.themes.FLATLY],
+                prevent_initial_callbacks=True, transforms=[MultiplexerTransform()])
 
 app.layout = dbc.Container([
+    dcc.Store(id='memory-output'),
     dbc.Row([
         dbc.Col(
             dbc.Card([
@@ -83,6 +87,7 @@ app.layout = dbc.Container([
 
 
 @app.callback(
+    Output('memory-output', 'data'),
     Output('indicator-graphic', 'figure'),
     Output('update-table', 'children'),
     Input('query', 'n_clicks'),
@@ -109,7 +114,8 @@ def main_query(n_clicks, site_id):
     figure = px.scatter(pressure_data, x=pressure_data.datetime, y=pressure_data.pressure_hobo,
                         color=pressure_data.batch_id)
 
-    return figure, html.Div(
+    data = table.to_json()
+    return data, figure, html.Div(
         [
             dash_table.DataTable(
                 data=table.to_dict("rows"),
@@ -125,6 +131,32 @@ def main_query(n_clicks, site_id):
 def display_selected(clickData):
     return json.dumps(clickData, indent=1)
 
+@app.callback(
+    Output('update-table', 'children'),
+    Input('indicator-graphic', 'selectedData'),
+    State('memory-output', 'data'))
+def display_selected_data(selectedData, data):
+    pressure_table = pd.read_json(data)
+    selected_styles = update_table_style(selectedData)
+    return html.Div(
+        [
+            dash_table.DataTable(
+                data=pressure_table.to_dict("rows"),
+                columns=[{"id": x, "name": x} for x in pressure_table.columns],
+                style_data_conditional=selected_styles,
+            )
+        ]
+    )
+
+def update_table_style(selectedData):
+    if selectedData is not None:
+        points_selected = []
+        for point in selectedData['points']:
+            points_selected.append(point['pointIndex'])
+        selected_styles = [{'if': {'row_index': i},
+                            'backgroundColor': 'pink'} for i in points_selected]
+
+    return selected_styles
 
 if __name__ == '__main__':
     app.run_server(debug=True)
