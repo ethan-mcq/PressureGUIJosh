@@ -14,9 +14,9 @@ import sqlite3
 from run_query import get_pressure, get_discharge
 
 # Declare the database file name here
-db_name = "/Users/ethanmcquhae/Desktop/copy.db"
+db_name = "copy.db"
 
-#app = Dash(external_stylesheets=[dbc.themes.FLATLY])
+# app = Dash(external_stylesheets=[dbc.themes.FLATLY])
 app = DashProxy(external_stylesheets=[dbc.themes.FLATLY],
                 prevent_initial_callbacks=True, transforms=[MultiplexerTransform()])
 
@@ -48,13 +48,13 @@ app.layout = dbc.Container([
             ], body="true", color="light"),
             html.Hr(),
             dbc.Card([
+                html.H5("Make Changes to Selected Data"),
                 dbc.Button("Delete", id="delete", color="primary",
                            style={'display': 'inline-block', "margin": "5px"},
                            n_clicks=0),
-                dbc.Button("Move Up", id="moveUp", color="primary",
-                           style={'display': 'inline-block', "margin": "5px"},
-                           n_clicks=0),
-                dbc.Button("Move Down", id="moveDown", color="primary",
+                html.P("Move:"),
+                dcc.Input(id="move", type="number", placeholder=""),
+                dbc.Button("Make Changes", id="makeChanges", color="primary",
                            style={'display': 'inline-block', "margin": "5px"},
                            n_clicks=0),
                 dbc.Button("Export Data", id="exportDF", color="primary",
@@ -72,7 +72,7 @@ app.layout = dbc.Container([
             dbc.Card([
                 dcc.Markdown("""
                     **Click Data**
-            
+
                     Click on a point from the graph to display more about that observation.
                 """),
                 html.Pre(id='selected'),
@@ -131,6 +131,7 @@ def main_query(n_clicks, site_id):
 def display_selected(clickData):
     return json.dumps(clickData, indent=1)
 
+
 @app.callback(
     Output('update-table', 'children'),
     Input('indicator-graphic', 'selectedData'),
@@ -147,7 +148,6 @@ def display_selected_data(selectedData, data):
             )
         ]
     )
-
 def update_table_style(selectedData):
     if selectedData is not None:
         points_selected = []
@@ -157,6 +157,9 @@ def update_table_style(selectedData):
                             'backgroundColor': 'pink'} for i in points_selected]
 
     return selected_styles
+
+
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
