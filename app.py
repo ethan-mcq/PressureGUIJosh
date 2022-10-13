@@ -14,7 +14,7 @@ import sqlite3
 from run_query import get_pressure, get_discharge
 
 # Declare the database file name here
-db_name = "copy.db"
+db_name = "/Users/jmac/Documents/Abbott/clean_datAbbase_4-15-2021.db"
 
 # app = Dash(external_stylesheets=[dbc.themes.FLATLY])
 app = DashProxy(external_stylesheets=[dbc.themes.FLATLY],
@@ -163,3 +163,6 @@ def update_table_style(selectedData):
 
 if __name__ == '__main__':
     app.run_server(debug=True)
+
+    # Input("indicator-graphic", "selectedData")
+    # State("memory-output", 'data')
