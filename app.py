@@ -14,7 +14,7 @@ import sqlite3
 from run_query import get_pressure, get_discharge
 
 # Declare the database file name here
-db_name = "/Users/jmac/Documents/Abbott/clean_datAbbase_4-15-2021.db"
+db_name = "copy.db"
 
 # app = Dash(external_stylesheets=[dbc.themes.FLATLY])
 app = DashProxy(external_stylesheets=[dbc.themes.FLATLY],
