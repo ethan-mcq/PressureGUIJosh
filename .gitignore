@@ -10,3 +10,5 @@ __pycache__/run_query.cpython-310.pyc
 .idea/misc.xml
 
 .idea/PressureGUI.iml
+
+__pycache__/
