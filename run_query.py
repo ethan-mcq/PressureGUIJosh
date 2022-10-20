@@ -36,10 +36,14 @@ def get_pressure(cursor, site_id):
         pressure_dict["pressure_hobo"].append(pressure)
         pressure_dict["index"].append(index)
 
-    pressure_data = joinDict(pressure_dict, pressure_data)
-    pressure_data = pd.DataFrame.from_dict(pressure_data)
+
+    # pressure_data = joinDict(pressure_dict, pressure_data)
+    # pressure_data = pd.DataFrame.from_dict(pressure_data)
     #pressure_data = pd.to_datetime(pressure_data.datetime)
 
+    pressure_data = pd.DataFrame(pressure_dict)
+    pressure_data['datetime'] = pd.to_datetime(pressure_data.datetime, format="%d/%m/%y %H:%M:%S")
+    pressure_data = pressure_data.sort_values(by=['datetime'])
     return pressure_data
 
 
