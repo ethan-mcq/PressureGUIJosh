@@ -110,7 +110,7 @@ def main_query(n_clicks, site_id):
     table['pressure_hobo'].replace('', np.nan, inplace=True)
     table.dropna(subset=['pressure_hobo'], inplace=True)
     table.drop('index', axis=1, inplace=True)
-    print(pressure_data.dtypes)
+
     figure = px.scatter(pressure_data, x=pressure_data.datetime, y=pressure_data.pressure_hobo,
                         color=pressure_data.batch_id)
 
@@ -184,11 +184,9 @@ def update_table_style(selectedData):
     State('indicator-graphic', 'selectedData'))
 def move_selected_data(n_clicks, data, value, selectedData):
     if n_clicks > 0 and value != 0 and selectedData is not None:
-        print(f"Make changes clicked {n_clicks} times")
         pressure_table = pd.read_json(data)
         pressure_table = pd.DataFrame(pressure_table)
         selected_styles = update_table_style(selectedData)
-        print(value)
 
         date_selected = []
         pressure_selected = []
@@ -207,8 +205,7 @@ def move_selected_data(n_clicks, data, value, selectedData):
         del joined['pressure_hobo_x']
 
         joined['batch_id'] = joined['batch_id'].apply(lambda x: str(x))
-        print(joined.dtypes)
-        print(pressure_table.dtypes)
+
         figure = px.scatter(joined, x='datetime', y='pressure_hobo_y',
                             color='batch_id')
         updatedData = joined.to_json()
