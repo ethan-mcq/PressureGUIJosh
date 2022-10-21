@@ -182,7 +182,7 @@ def update_table_style(selectedData):
     State('memory-output', 'data'),
     State('move', 'value'),
     State('indicator-graphic', 'selectedData'))
-def display_selected_data(n_clicks, data, value, selectedData):
+def move_selected_data(n_clicks, data, value, selectedData):
     if n_clicks > 0 and value != 0 and selectedData is not None:
         print(f"Make changes clicked {n_clicks} times")
         pressure_table = pd.read_json(data)
