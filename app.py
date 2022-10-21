@@ -9,6 +9,7 @@ import plotly.express as px
 import json
 import numpy as np
 from pathlib import Path
+import statistics as stat
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import sqlite3
@@ -56,6 +57,8 @@ app.layout = dbc.Container([
                            n_clicks=0),
                 html.P("Move:"),
                 dcc.Input(id="move", type="number", placeholder=""),
+                html.P("Expand/Compress:"),
+                dcc.Input(id="expcomp", type="number", placeholder=""),
                 dbc.Button("Make Changes", id="makeChanges", color="primary",
                            style={'display': 'inline-block', "margin": "5px"},
                            n_clicks=0),
@@ -180,9 +183,10 @@ def update_table_style(selectedData):
     Input('makeChanges', 'n_clicks'),
     State('memory-output', 'data'),
     State('move', 'value'),
+    State('expcomp', 'value'),
     State('indicator-graphic', 'selectedData'))
-def move_selected_data(n_clicks, data, value, selectedData):
-    if n_clicks > 0 and value != 0 and selectedData is not None:
+def move_selected_data(n_clicks, data, shift, expcomp, selectedData):
+    if n_clicks > 0 and (shift is not None or expcomp is not None) and selectedData is not None:
         pressure_table = pd.read_json(data)
         pressure_table = pd.DataFrame(pressure_table)
 
@@ -195,8 +199,19 @@ def move_selected_data(n_clicks, data, value, selectedData):
 
         change_dict = {'datetime': date_selected, 'pressure_hobo': pressure_selected}
         change_df = pd.DataFrame(change_dict)
-        change_df['pressure_hobo'] = change_df['pressure_hobo'] + value
+
+        if shift is not None:
+            change_df['pressure_hobo'] = change_df['pressure_hobo'] + shift
+        if expcomp is not None:
+            change_df_mean = stat.mean(change_df['pressure_hobo'])
+
+            if expcomp < 1:
+                change_df['pressure_hobo'] = (-(change_df['pressure_hobo'] - change_df_mean) * expcomp) + change_df['pressure_hobo']
+            else:
+                change_df['pressure_hobo'] = ((change_df['pressure_hobo'] - change_df_mean) * expcomp) + change_df['pressure_hobo']
+
         change_df['datetime'] = pd.to_datetime(change_df['datetime'], format='%Y-%m-%d %H:%M:%S')
+
 
         joined = pressure_table.merge(change_df, on='datetime', how='left')
         joined.pressure_hobo_y.fillna(joined.pressure_hobo_x, inplace=True)
