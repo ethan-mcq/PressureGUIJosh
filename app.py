@@ -14,7 +14,7 @@ import sqlite3
 from run_query import get_pressure, get_discharge
 
 # Declare the database file name here
-db_name = "copy.db"
+db_name = "/Users/ethanmcquhae/Desktop/copy.db"
 
 # app = Dash(external_stylesheets=[dbc.themes.FLATLY])
 app = DashProxy(external_stylesheets=[dbc.themes.FLATLY],
@@ -22,6 +22,7 @@ app = DashProxy(external_stylesheets=[dbc.themes.FLATLY],
 
 app.layout = dbc.Container([
     dcc.Store(id='memory-output'),
+    dcc.Store(id='updated-table'),
     dbc.Row([
         dbc.Col(
             dbc.Card([
@@ -105,12 +106,11 @@ def main_query(n_clicks, site_id):
     # to fit your system requirements
     pressure_data = get_pressure(cursor, site_id)
     # discharge_data = get_discharge(cursor, site_id)
-
     table = pd.DataFrame(pressure_data)
     table['pressure_hobo'].replace('', np.nan, inplace=True)
     table.dropna(subset=['pressure_hobo'], inplace=True)
     table.drop('index', axis=1, inplace=True)
-
+    print(pressure_data.dtypes)
     figure = px.scatter(pressure_data, x=pressure_data.datetime, y=pressure_data.pressure_hobo,
                         color=pressure_data.batch_id)
 
@@ -135,31 +135,94 @@ def display_selected(clickData):
 @app.callback(
     Output('update-table', 'children'),
     Input('indicator-graphic', 'selectedData'),
-    State('memory-output', 'data'))
-def display_selected_data(selectedData, data):
+    State('memory-output', 'data'),
+    State('updated-table', 'data'),)
+def display_selected_data(selectedData, data, updatedData):
     pressure_table = pd.read_json(data)
-    selected_styles = update_table_style(selectedData)
-    return html.Div(
-        [
-            dash_table.DataTable(
-                data=pressure_table.to_dict("rows"),
-                columns=[{"id": x, "name": x} for x in pressure_table.columns],
-                style_data_conditional=selected_styles,
-            )
-        ]
-    )
-def update_table_style(selectedData):
     if selectedData is not None:
-        points_selected = []
-        for point in selectedData['points']:
-            points_selected.append(point['pointIndex'])
-        selected_styles = [{'if': {'row_index': i},
-                            'backgroundColor': 'pink'} for i in points_selected]
+        selected_styles = update_table_style(selectedData)
+        if updatedData is not None:
+            pressure_table = pd.read_json(updatedData)
+            return html.Div(
+                [
+                    dash_table.DataTable(
+                        data=pressure_table.to_dict("rows"),
+                        columns=[{"id": x, "name": x} for x in pressure_table.columns],
+                        style_data_conditional=selected_styles,
+                    )
+                ]
+            )
+        else:
+            return html.Div(
+                [
+                    dash_table.DataTable(
+                        data=pressure_table.to_dict("rows"),
+                        columns=[{"id": x, "name": x} for x in pressure_table.columns],
+                        style_data_conditional=selected_styles,
+                    )
+                ]
+            )
+    else:
+        pass
+
+def update_table_style(selectedData):
+    points_selected = []
+    for point in selectedData['points']:
+        points_selected.append(point['pointIndex'])
+    selected_styles = [{'if': {'row_index': i},
+                        'backgroundColor': 'pink'} for i in points_selected]
 
     return selected_styles
 
+@app.callback(
+    Output('updated-table', 'data'),
+    Output('indicator-graphic', 'figure'),
+    Output('update-table', 'children'),
+    Input('makeChanges', 'n_clicks'),
+    State('memory-output', 'data'),
+    State('move', 'value'),
+    State('indicator-graphic', 'selectedData'))
+def display_selected_data(n_clicks, data, value, selectedData):
+    if n_clicks > 0 and value != 0 and selectedData is not None:
+        print(f"Make changes clicked {n_clicks} times")
+        pressure_table = pd.read_json(data)
+        pressure_table = pd.DataFrame(pressure_table)
+        selected_styles = update_table_style(selectedData)
+        print(value)
 
+        date_selected = []
+        pressure_selected = []
+        for point in selectedData['points']:
+            date_selected.append(point['x'])
+        for point in selectedData['points']:
+            pressure_selected.append(point['y'])
 
+        change_dict = {'datetime': date_selected, 'pressure_hobo': pressure_selected}
+        change_df = pd.DataFrame(change_dict)
+        change_df['pressure_hobo'] = change_df['pressure_hobo'] + value
+        change_df['datetime'] = pd.to_datetime(change_df['datetime'], format="%Y-%m-%d %H:%M:%S")
+
+        joined = pressure_table.merge(change_df, on='datetime', how='left')
+        joined.pressure_hobo_y.fillna(joined.pressure_hobo_x, inplace=True)
+        del joined['pressure_hobo_x']
+
+        joined['batch_id'] = joined['batch_id'].apply(lambda x: str(x))
+        print(joined.dtypes)
+        print(pressure_table.dtypes)
+        figure = px.scatter(joined, x='datetime', y='pressure_hobo_y',
+                            color='batch_id')
+        updatedData = joined.to_json()
+        return updatedData, figure, html.Div(
+            [
+                dash_table.DataTable(
+                    data=joined.to_dict("rows"),
+                    columns=[{"id": x, "name": x} for x in joined.columns],
+                    style_data_conditional=selected_styles,
+                )
+            ]
+        )
+    else:
+        pass
 
 if __name__ == '__main__':
     app.run_server(debug=True)
