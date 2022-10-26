@@ -16,7 +16,7 @@ import sqlite3
 from run_query import get_pressure, get_discharge
 
 # Declare the database file name here
-db_name = "/Users/ethanmcquhae/Desktop/copy.db"
+db_name = "copy.db"
 
 # app = Dash(external_stylesheets=[dbc.themes.FLATLY])
 app = DashProxy(external_stylesheets=[dbc.themes.FLATLY],
@@ -188,13 +188,11 @@ def update_table_style(selectedData):
 def move_selected_data(n_clicks, data, shift, expcomp, selectedData):
     if n_clicks > 0 and (shift is not None or expcomp is not None) and selectedData is not None:
         pressure_table = pd.read_json(data)
-        pressure_table = pd.DataFrame(pressure_table)
 
         date_selected = []
         pressure_selected = []
         for point in selectedData['points']:
             date_selected.append(point['x'])
-        for point in selectedData['points']:
             pressure_selected.append(point['y'])
 
         change_dict = {'datetime': date_selected, 'pressure_hobo': pressure_selected}
@@ -225,21 +223,27 @@ def move_selected_data(n_clicks, data, shift, expcomp, selectedData):
     State('indicator-graphic', 'clickData'),
     State('memory-output', 'data'))
 def deleteButton(n_clicks, selection, data):
+    # Read in dataframe from local JSON store.
     df = pd.read_json(data)
-    matched_points = []
+
     if selection is not None:
         datetimes_selected = []
         pressures_selected = []
+        # Add points from the selection
         for point in selection['points']:
             datetimes_selected.append(point['x'])
             pressures_selected.append(point['y'])
+        # Search data for datetime matches
         datetimes_series = df['datetime'].isin(datetimes_selected)
         matched_datetimes = df[datetimes_series]
+        # Search datetime matches for y-value matches
         pressures_series = matched_datetimes['pressure_hobo'].isin(pressures_selected);
         matched_points = matched_datetimes[pressures_series]
 
+    # remove the data points from the data frame
     df.drop(matched_points.index, axis=0, inplace=True)
 
+    # Save the data into the Local json store and trigger the graph update.
     return df.to_json()
 
 @app.callback(
@@ -247,13 +251,18 @@ def deleteButton(n_clicks, selection, data):
     Output('indicator-graphic', 'figure'),
     Output('update-table', 'children'))
 def updateOnNewData(data):
+    # Read in dataframe from JSON
     df = pd.read_json(data)
+
+    # Convert batch_id to strings
     df['batch_id'] = df['batch_id'].apply(lambda x: str(x))
 
+    # Create a scatterplot figure from the dataframe
     figure = px.scatter(df, x=df.datetime, y=df.pressure_hobo,
                         color=df.batch_id)
 
-    return figure, html.Div(
+    # create a DashTable from the data
+    table = html.Div(
         [
             dash_table.DataTable(
                 data=df.to_dict('rows'),
@@ -261,6 +270,9 @@ def updateOnNewData(data):
             )
         ]
     )
+
+    # return objects into the graph and table
+    return figure, table
 
 @app.callback(
     Output('memory-output', 'data'),
@@ -270,7 +282,6 @@ def updateOnNewData(data):
 def export(n_clicks, data, siteID):
     if data is not None:
         pressure_table = pd.read_json(data)
-        pressure_table = pd.DataFrame(pressure_table)
 
         path = Path.joinpath(Path.home(), 'Downloads', 'PressureData')
         path.mkdir(parents=True, exist_ok=True)
@@ -281,6 +292,3 @@ def export(n_clicks, data, siteID):
 
 if __name__ == '__main__':
     app.run_server(debug=True)
-
-    # Input("indicator-graphic", "selectedData")
-    # State("memory-output", 'data')
