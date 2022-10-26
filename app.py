@@ -93,8 +93,6 @@ app.layout = dbc.Container([
 
 @app.callback(
     Output('memory-output', 'data'),
-    Output('indicator-graphic', 'figure'),
-    Output('update-table', 'children'),
     Input('query', 'n_clicks'),
     State('site_id', 'value'))
 def main_query(n_clicks, site_id):
@@ -115,18 +113,8 @@ def main_query(n_clicks, site_id):
     table.dropna(subset=['pressure_hobo'], inplace=True)
     table.drop('index', axis=1, inplace=True)
 
-    figure = px.scatter(pressure_data, x=pressure_data.datetime, y=pressure_data.pressure_hobo,
-                        color=pressure_data.batch_id)
-
     data = table.to_json()
-    return data, figure, html.Div(
-        [
-            dash_table.DataTable(
-                data=table.to_dict('rows'),
-                columns=[{'id': x, 'name': x} for x in table.columns],
-            )
-        ]
-    )
+    return data
 
 
 @app.callback(
