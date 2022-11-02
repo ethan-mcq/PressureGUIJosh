@@ -53,6 +53,10 @@ export_tab = [
                n_clicks=0),
 ]
 
+history_tab = [
+    html.P("coming soon!"),
+]
+
 editor = [
     # dbc.Card([
     #     dbc.CardHeader([
@@ -61,6 +65,7 @@ editor = [
                 dbc.AccordionItem(compress_tab, title="Compress"),
                 dbc.AccordionItem(delete_tab, title="Delete"),
                 dbc.AccordionItem(export_tab, title="Export"),
+                dbc.AccordionItem(history_tab, title="History")
             ], start_collapsed=True),
     #     ]),
     #
