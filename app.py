@@ -27,6 +27,27 @@ app.layout = layout
 
 
 @app.callback(
+    Output('mean', 'children'),
+    Output('variance', 'children'),
+    Input('indicator-graphic', 'selectedData'))
+def display_selected(selection):
+    print(selection)
+
+    if selection is not None:
+        pressures_selected = []
+        for point in selection['points']:
+            pressures_selected.append(point['y'])
+
+        pressures_selected = pd.DataFrame(pressures_selected)
+
+        return pressures_selected.mean(), pressures_selected.var()
+
+    else:
+        return 0, 0
+
+
+
+@app.callback(
     Output('memory-output', 'data'),
     Input('query', 'n_clicks'),
     State('site_id', 'value'))
@@ -52,18 +73,18 @@ def main_query(n_clicks, site_id):
     return data
 
 
-@app.callback(
-    Output('selected', 'children'),
-    Input('indicator-graphic', 'clickData'))
-def display_selected(clickData):
-    return json.dumps(clickData, indent=1)
+# @app.callback(
+#     Output('selected', 'children'),
+#     Input('indicator-graphic', 'clickData'))
+# def display_selected(clickData):
+#     return json.dumps(clickData, indent=1)
 
 
 @app.callback(
     Output('update-table', 'children'),
     Input('indicator-graphic', 'selectedData'),
     State('memory-output', 'data'),
-    State('updated-table', 'data'), )
+    State('updated-table', 'data'),)
 def display_selected_data(selectedData, data, updatedData):
     pressure_table = pd.read_json(data)
     if selectedData is not None:
