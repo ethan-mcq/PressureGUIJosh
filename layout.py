@@ -17,6 +17,10 @@ localstorage = [
     dcc.Store(id='updated-table'),
 ]
 
+download = [
+    dcc.Download(id="download-csv"),
+]
+
 shift_tab = [
     html.P("Vertical Shift of:"),
     dcc.Input(id="shift_amount", type="number", placeholder="", style={'width': '100%'}),
@@ -65,6 +69,7 @@ editor = [
 
 layout = dbc.Container([
     *localstorage,
+    *download,
     *header,
     html.Hr(),
     dbc.Row([
