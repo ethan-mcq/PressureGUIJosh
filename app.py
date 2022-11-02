@@ -14,7 +14,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import sqlite3
 from run_query import get_pressure, get_discharge
-from layout import layout;
+from layout import layout
 
 # Declare the database file name here
 db_name = "copy.db"
@@ -63,7 +63,7 @@ def display_selected(clickData):
     Output('update-table', 'children'),
     Input('indicator-graphic', 'selectedData'),
     State('memory-output', 'data'),
-    State('updated-table', 'data'),)
+    State('updated-table', 'data'), )
 def display_selected_data(selectedData, data, updatedData):
     pressure_table = pd.read_json(data)
     if selectedData is not None:
@@ -92,6 +92,7 @@ def display_selected_data(selectedData, data, updatedData):
     else:
         pass
 
+
 def update_table_style(selectedData):
     points_selected = []
     for point in selectedData['points']:
@@ -100,6 +101,7 @@ def update_table_style(selectedData):
                         'backgroundColor': 'pink'} for i in points_selected]
 
     return selected_styles
+
 
 @app.callback(
     Output('memory-output', 'data'),
@@ -159,11 +161,10 @@ def compress_selected_data(n_clicks, data, history, expcomp, selectedData):
 
         if expcomp is not None:
             change_df_mean = stat.mean(change_df['pressure_hobo'])
-            change_df['pressure_hobo'] = change_df['pressure_hobo'] - ((change_df['pressure_hobo'] - change_df_mean) * expcomp)
-
+            change_df['pressure_hobo'] = change_df['pressure_hobo'] - (
+                        (change_df['pressure_hobo'] - change_df_mean) * expcomp)
 
         change_df['datetime'] = pd.to_datetime(change_df['datetime'], format='%Y-%m-%d %H:%M:%S')
-
 
         joined = pressure_table.merge(change_df, on='datetime', how='left')
         joined.pressure_hobo_y.fillna(joined.pressure_hobo_x, inplace=True)
@@ -175,12 +176,13 @@ def compress_selected_data(n_clicks, data, history, expcomp, selectedData):
     else:
         pass
 
+
 @app.callback(
     Output('memory-output', 'data'),
     Input('delete', 'n_clicks'),
     State('indicator-graphic', 'selectedData'),
     State('memory-output', 'data'))
-def deleteButton(n_clicks, selection, data):
+def delete_button(n_clicks, selection, data):
     # Read in dataframe from local JSON store.
     df = pd.read_json(data)
 
@@ -201,16 +203,17 @@ def deleteButton(n_clicks, selection, data):
         # remove the data points from the data frame
         df.drop(matched_points.index, axis=0, inplace=True)
 
-    # Save the data into the Local json store and trigger the graph update.
+        # Save the data into the Local json store and trigger the graph update.
         return df.to_json()
     else:
         pass
+
 
 @app.callback(
     Input('memory-output', 'data'),
     Output('indicator-graphic', 'figure'),
     Output('update-table', 'children'))
-def updateOnNewData(data):
+def update_on_new_data(data):
     # Read in dataframe from JSON
     df = pd.read_json(data)
 
@@ -234,21 +237,18 @@ def updateOnNewData(data):
     # return objects into the graph and table
     return figure, table
 
+
 @app.callback(
-    Output('memory-output', 'data'),
+    Output('download-csv', 'data'),
     Input('exportDF', 'n_clicks'),
     State('memory-output', 'data'),
-    State('site_id', 'value'))
-def export(n_clicks, data, siteID):
+    State('export_filename', 'value'),
+    prevent_initial_call=True
+)
+def export(n_clicks, data, filename):
     if data is not None:
         pressure_table = pd.read_json(data)
-
-        path = Path.joinpath(Path.home(), 'Downloads', 'PressureData')
-        path.mkdir(parents=True, exist_ok=True)
-        siteID_file_name = Path.joinpath(path, f'{siteID}.csv')
-        pressure_table.to_csv(siteID_file_name, sep=",")
-
-        return pressure_table.to_json()
+        return dcc.send_data_frame(pressure_table.to_csv, filename)
 
 if __name__ == '__main__':
     app.run_server(debug=True)
