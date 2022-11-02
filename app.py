@@ -84,7 +84,8 @@ def main_query(n_clicks, site_id):
     Output('update-table', 'children'),
     Input('indicator-graphic', 'selectedData'),
     State('memory-output', 'data'),
-    State('updated-table', 'data'),)
+    State('updated-table', 'data')
+)
 def display_selected_data(selectedData, data, updatedData):
     pressure_table = pd.read_json(data)
     if selectedData is not None:
@@ -270,6 +271,7 @@ def export(n_clicks, data, filename):
     if data is not None:
         pressure_table = pd.read_json(data)
         return dcc.send_data_frame(pressure_table.to_csv, filename)
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
