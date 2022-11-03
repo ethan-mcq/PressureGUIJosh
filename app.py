@@ -15,6 +15,7 @@ import plotly.graph_objects as go
 import sqlite3
 from run_query import get_pressure, get_discharge
 from layout import layout
+from changes import apply_changes
 
 # Declare the database file name here
 db_name = "copy.db"
@@ -44,7 +45,6 @@ def display_selected(selection):
 
     else:
         return 0, 0
-
 
 
 @app.callback(
@@ -125,87 +125,7 @@ def update_table_style(selectedData):
     return selected_styles
 
 
-@app.callback(
-    Output('memory-output', 'data'),
-    Input('shift_button', 'n_clicks'),
-    State('memory-output', 'data'),
-    State('history', 'data'),
-    State('shift_amount', 'value'),
-    State('indicator-graphic', 'selectedData'))
-def shift_selected_data(n_clicks, data, history, shift, selectedData):
-    if n_clicks > 0 and shift is not None and selectedData is not None:
-        pressure_table = pd.read_json(data)
-
-        date_selected = []
-        pressure_selected = []
-        for point in selectedData['points']:
-            date_selected.append(point['x'])
-            pressure_selected.append(point['y'])
-
-        change_dict = {'datetime': date_selected, 'pressure_hobo': pressure_selected}
-        change_df = pd.DataFrame(change_dict)
-
-        if shift is not None:
-            change_df['pressure_hobo'] = change_df['pressure_hobo'] + shift
-
-        change_df['datetime'] = pd.to_datetime(change_df['datetime'], format='%Y-%m-%d %H:%M:%S')
-
-        joined = pressure_table.merge(change_df, on='datetime', how='left')
-        joined.pressure_hobo_y.fillna(joined.pressure_hobo_x, inplace=True)
-        del joined['pressure_hobo_x']
-
-        joined = joined.rename({'pressure_hobo_y': 'pressure_hobo'}, axis=1)
-
-        return joined.to_json()
-    else:
-        pass
-
-
-@app.callback(
-    Output('memory-output', 'data'),
-    Input('compress_button', 'n_clicks'),
-    State('memory-output', 'data'),
-    State('history', 'data'),
-    State('compression_factor', 'value'),
-    State('indicator-graphic', 'selectedData'))
-def compress_selected_data(n_clicks, data, history, expcomp, selectedData):
-    if n_clicks > 0 and expcomp is not None and selectedData is not None:
-        pressure_table = pd.read_json(data)
-
-        date_selected = []
-        pressure_selected = []
-        for point in selectedData['points']:
-            date_selected.append(point['x'])
-            pressure_selected.append(point['y'])
-
-        change_dict = {'datetime': date_selected, 'pressure_hobo': pressure_selected}
-        change_df = pd.DataFrame(change_dict)
-
-        if expcomp is not None:
-            change_df_mean = stat.mean(change_df['pressure_hobo'])
-            change_df['pressure_hobo'] = change_df['pressure_hobo'] - (
-                        (change_df['pressure_hobo'] - change_df_mean) * expcomp)
-
-        change_df['datetime'] = pd.to_datetime(change_df['datetime'], format='%Y-%m-%d %H:%M:%S')
-
-        joined = pressure_table.merge(change_df, on='datetime', how='left')
-        joined.pressure_hobo_y.fillna(joined.pressure_hobo_x, inplace=True)
-        del joined['pressure_hobo_x']
-
-        joined = joined.rename({'pressure_hobo_y': 'pressure_hobo'}, axis=1)
-
-        return joined.to_json()
-    else:
-        pass
-
-
-@app.callback(
-    Output('memory-output', 'data'),
-    Input('delete', 'n_clicks'),
-    State('indicator-graphic', 'selectedData'),
-    State('memory-output', 'data'))
-def delete_button(n_clicks, selection, data):
-    # Read in dataframe from local JSON store.
+def dataframe_from_selection(data, selection):
     df = pd.read_json(data)
 
     if selection is not None:
@@ -222,8 +142,66 @@ def delete_button(n_clicks, selection, data):
         pressures_series = matched_datetimes['pressure_hobo'].isin(pressures_selected);
         matched_points = matched_datetimes[pressures_series]
 
+        return matched_points
+
+@app.callback(
+    Output('memory-output', 'data'),
+    Input('shift_button', 'n_clicks'),
+    State('memory-output', 'data'),
+    State('history', 'data'),
+    State('shift_amount', 'value'),
+    State('indicator-graphic', 'selectedData'))
+def shift_selected_data(n_clicks, data, history, shift, selectedData):
+    if n_clicks > 0 and shift is not None and selectedData is not None:
+        data_df = pd.read_json(data)
+        change_df = dataframe_from_selection(data, selectedData)
+
+        if shift is not None:
+            change_df['pressure_hobo'] = shift
+            changed_df = apply_changes(data_df, change_df)
+
+            return changed_df.to_json()
+    else:
+        pass
+
+
+@app.callback(
+    Output('memory-output', 'data'),
+    Input('compress_button', 'n_clicks'),
+    State('memory-output', 'data'),
+    State('history', 'data'),
+    State('compression_factor', 'value'),
+    State('indicator-graphic', 'selectedData'))
+def compress_selected_data(n_clicks, data, history, expcomp, selectedData):
+    data_df = pd.read_json(data)
+    if n_clicks > 0 and expcomp is not None and selectedData is not None:
+        change_df = dataframe_from_selection(data, selectedData)
+
+        if expcomp is not None:
+            change_df_mean = stat.mean(change_df['pressure_hobo'])
+            change_df['pressure_hobo'] = -(change_df['pressure_hobo'] - change_df_mean) / expcomp
+
+            changed_df = apply_changes(data_df, change_df)
+
+            return changed_df.to_json()
+    else:
+        pass
+
+
+@app.callback(
+    Output('memory-output', 'data'),
+    Input('delete', 'n_clicks'),
+    State('indicator-graphic', 'selectedData'),
+    State('memory-output', 'data'))
+def delete_button(n_clicks, selection, data):
+    # Read in dataframe from local JSON store.
+    df = pd.read_json(data)
+
+    if selection is not None:
+        change_df = dataframe_from_selection(data, selection)
+
         # remove the data points from the data frame
-        df.drop(matched_points.index, axis=0, inplace=True)
+        df.drop(change_df.index, axis=0, inplace=True)
 
         # Save the data into the Local json store and trigger the graph update.
         return df.to_json()

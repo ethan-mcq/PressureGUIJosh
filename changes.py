@@ -1,5 +1,13 @@
 import pandas as pd
 
+def apply_changes(data, changes):
+    bool_selection = data['datetime'].isin(changes['datetime'])
+    # data_series = data.loc[bool_selection]["pressure_hobo"]
+    changed_data = data.loc[bool_selection]["pressure_hobo"].add(changes["pressure_hobo"].values)
+
+    data.update(changed_data)
+
+    return data
 
 def undoDelete(data, changes):
     pass
