@@ -57,7 +57,7 @@ def main_query(n_clicks, site_id):
     print(f"button clicked {n_clicks} times")
     if db_name.endswith(".db"):
         conn = sqlite3.connect(db_name)
-        cursor = conn.cursor()  # This object will allow queries to be ran on the database
+        cursor = conn.cursor()  # This object will allow queries to be run on the database
     else:
         print("Cannot open database file")
 
