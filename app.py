@@ -32,7 +32,7 @@ app.layout = layout
     Output('variance', 'children'),
     Input('indicator-graphic', 'selectedData'))
 def display_selected(selection):
-    print(selection)
+    # print(selection)
 
     if selection is not None:
         pressures_selected = []
@@ -219,7 +219,7 @@ def delete_button(n_clicks, selection, data, history):
         change_df = dataframe_from_selection(data, selection)
 
         # remove the data points from the data frame
-        df.drop(change_df.index, axis=0, inplace=True)
+        df.drop(change_df.index, axis=0, inplace=True)  # TODO what does inplace do?
 
         start = change_df.iloc[0, 1]
         end = change_df.iloc[-1, 1]
@@ -296,6 +296,7 @@ def undo(n_clicks, history, data):
         return data.to_json(), history
     else:
         pass
+
 @app.callback(
     Output('download-csv', 'data'),
     Input('exportDF', 'n_clicks'),

@@ -1,6 +1,7 @@
 import pandas as pd
 import json
 
+
 def apply_changes(data, changes):
     bool_selection = data['datetime'].isin(changes['datetime'])
     # data_series = data.loc[bool_selection]["pressure_hobo"]
@@ -10,9 +11,10 @@ def apply_changes(data, changes):
 
     return data
 
+
 def log_changes(history, type, changes_df, description):
-    newChange = Change(des=description,type=type,changes_df=changes_df)
-    if (isinstance(history,str)):
+    newChange = Change(des=description, type=type, changes_df=changes_df)
+    if (isinstance(history, str)):
         try:
             history = json.loads(history)
         except:
@@ -20,8 +22,10 @@ def log_changes(history, type, changes_df, description):
     history.append(newChange.to_json())
     return history
 
+
 def undo_delete(data, changes):
-    pass
+    data = pd.read_json(data)
+    return pd.concat([data, changes], join="inner")  # todo is join inner really necessary?
 
 
 def undo_shift(data, changes):
@@ -29,8 +33,10 @@ def undo_shift(data, changes):
     changes.pressure_hobo *= -1
     return apply_changes(data, changes)
 
+
 def undo_add(data, changes):
     pass
+
 
 class Change:
     # Text description of the change
