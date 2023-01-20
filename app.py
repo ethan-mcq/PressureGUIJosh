@@ -15,7 +15,7 @@ import plotly.graph_objects as go
 import sqlite3
 from run_query import get_pressure, get_discharge
 from layout import layout
-from changes import apply_changes
+from changes import apply_changes, log_changes, Change
 
 # Declare the database file name here
 db_name = "copy.db"
@@ -32,7 +32,7 @@ app.layout = layout
     Output('variance', 'children'),
     Input('indicator-graphic', 'selectedData'))
 def display_selected(selection):
-    print(selection)
+    # print(selection)
 
     if selection is not None:
         pressures_selected = []
@@ -49,6 +49,7 @@ def display_selected(selection):
 
 @app.callback(
     Output('memory-output', 'data'),
+    Output('history', 'data'),
     Input('query', 'n_clicks'),
     State('site_id', 'value'))
 def main_query(n_clicks, site_id):
@@ -56,7 +57,7 @@ def main_query(n_clicks, site_id):
     print(f"button clicked {n_clicks} times")
     if db_name.endswith(".db"):
         conn = sqlite3.connect(db_name)
-        cursor = conn.cursor()  # This object will allow queries to be ran on the database
+        cursor = conn.cursor()  # This object will allow queries to be run on the database
     else:
         print("Cannot open database file")
 
@@ -70,7 +71,8 @@ def main_query(n_clicks, site_id):
     table.drop('index', axis=1, inplace=True)
 
     data = table.to_json()
-    return data
+    change_log = log_changes([], "init", pd.DataFrame(), f"Initialized with site_id: {site_id}")
+    return data, change_log
 
 
 # @app.callback(
@@ -146,11 +148,13 @@ def dataframe_from_selection(data, selection):
 
 @app.callback(
     Output('memory-output', 'data'),
+    Output('history', 'data'),
     Input('shift_button', 'n_clicks'),
     State('memory-output', 'data'),
     State('history', 'data'),
     State('shift_amount', 'value'),
-    State('indicator-graphic', 'selectedData'))
+    State('indicator-graphic', 'selectedData')
+)
 def shift_selected_data(n_clicks, data, history, shift, selectedData):
     if n_clicks > 0 and shift is not None and selectedData is not None:
         data_df = pd.read_json(data)
@@ -160,18 +164,25 @@ def shift_selected_data(n_clicks, data, history, shift, selectedData):
             change_df['pressure_hobo'] = shift
             changed_df = apply_changes(data_df, change_df)
 
-            return changed_df.to_json()
+            start = change_df.iloc[0, 1]
+            end = change_df.iloc[-1, 1]
+            dir = "up" if (shift > 0) else "down"
+            change_log = log_changes(history, "shift", change_df, f"shifted {dir} by {abs(shift)} from {start} to {end}")
+
+            return changed_df.to_json(), change_log
     else:
         pass
 
 
 @app.callback(
     Output('memory-output', 'data'),
+    Output('history', 'data'),
     Input('compress_button', 'n_clicks'),
     State('memory-output', 'data'),
     State('history', 'data'),
     State('compression_factor', 'value'),
-    State('indicator-graphic', 'selectedData'))
+    State('indicator-graphic', 'selectedData')
+)
 def compress_selected_data(n_clicks, data, history, expcomp, selectedData):
     data_df = pd.read_json(data)
     if n_clicks > 0 and expcomp is not None and selectedData is not None:
@@ -183,17 +194,24 @@ def compress_selected_data(n_clicks, data, history, expcomp, selectedData):
 
             changed_df = apply_changes(data_df, change_df)
 
-            return changed_df.to_json()
+            start = change_df.iloc[0, 1]
+            end = change_df.iloc[-1, 1]
+            change_log = log_changes(history, "compression", change_df, f"compressed by factor of {expcomp} around the mean of {change_df_mean} from {start} to {end}")
+
+            return changed_df.to_json(), change_log
     else:
         pass
 
 
 @app.callback(
     Output('memory-output', 'data'),
+    Output('history', 'data'),
     Input('delete', 'n_clicks'),
     State('indicator-graphic', 'selectedData'),
-    State('memory-output', 'data'))
-def delete_button(n_clicks, selection, data):
+    State('memory-output', 'data'),
+    State('history', 'data')
+)
+def delete_button(n_clicks, selection, data, history):
     # Read in dataframe from local JSON store.
     df = pd.read_json(data)
 
@@ -201,10 +219,14 @@ def delete_button(n_clicks, selection, data):
         change_df = dataframe_from_selection(data, selection)
 
         # remove the data points from the data frame
-        df.drop(change_df.index, axis=0, inplace=True)
+        df.drop(change_df.index, axis=0, inplace=True)  # TODO what does inplace do?
+
+        start = change_df.iloc[0, 1]
+        end = change_df.iloc[-1, 1]
+        change_log = log_changes(history, "delete", change_df, f"deleted {change_df.shape[0]} points from {start} to {end}")
 
         # Save the data into the Local json store and trigger the graph update.
-        return df.to_json()
+        return df.to_json(), change_log
     else:
         pass
 
@@ -237,6 +259,43 @@ def update_on_new_data(data):
     # return objects into the graph and table
     return figure, table
 
+@app.callback(
+    Input('history', 'data'),
+    Output('history_log', 'children')
+)
+def display_changelog(history):
+    children = []
+    if (isinstance(history,str)):
+        try:
+            history = json.loads(history)
+        except:
+            print("ERROR: couldn't parse json history string, save your work and run while you still can")
+    for change in history:
+        change = Change(change)
+        children.append(
+            dbc.AccordionItem([
+                change.description
+            ], title=change.type)
+        )
+
+    return children
+
+
+@app.callback(
+    Input('undoChange', 'n_clicks'),
+    State('history', 'data'),
+    State('memory-output', 'data'),
+    Output('memory-output', 'data'),
+    Output('history', 'data')
+)
+def undo(n_clicks, history, data):
+    # if already initialized
+    if len(history) > 1:
+        change = Change(history.pop())
+        data = change.undoFunc(data, change.changes_df)
+        return data.to_json(), history
+    else:
+        pass
 
 @app.callback(
     Output('download-csv', 'data'),

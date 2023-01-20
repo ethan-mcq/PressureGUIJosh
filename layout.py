@@ -54,7 +54,10 @@ export_tab = [
 ]
 
 history_tab = [
-    html.P("coming soon!"),
+    dbc.Button("Undo", id="undoChange", color="primary",
+               style={'display': 'inline-block', "margin": "5px"},
+               n_clicks=0),
+    dbc.Accordion([], id="history_log", start_collapsed=True),
 ]
 
 editor = [
